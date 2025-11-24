@@ -1,6 +1,7 @@
 package mr
 
 import (
+	"encoding/json"
 	"fmt"
 	"hash/fnv"
 	"io"
@@ -34,7 +35,6 @@ func Worker(mapf func(string, string) []KeyValue, reducef func(string, []string)
 
 	ok := call("Coordinator.AssignTask", &args, &reply)
 	if ok {
-
 		fmt.Printf("Recieved filename:  %s\n", reply.Filename)
 		// use mapf and reducef here?
 
@@ -47,7 +47,19 @@ func Worker(mapf func(string, string) []KeyValue, reducef func(string, []string)
 			log.Fatalf("cannot read %v", reply.Filename)
 		}
 		file.Close()
+
 		kva := mapf(reply.Filename, string(content))
+
+		filename := fmt.Sprint("mr-%d-%d", 0, 0)
+		thatfile, err := os.Create(filename)
+
+		enc := json.NewEncoder(thatfile)
+
+		for _, kv := range kva {
+			err := enc.Encode(&kv)
+			if err != nil {
+			}
+		}
 
 	} else {
 		fmt.Printf("call failed!\n")
