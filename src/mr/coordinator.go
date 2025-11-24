@@ -13,6 +13,8 @@ import (
 // Our current state of the worker
 type State int
 
+var Nreduce int
+
 // Enums for the worker, idle = 0, working = 1. Which iota generates.
 const (
 	StateIdle = iota
@@ -49,6 +51,7 @@ func (c *Coordinator) AssignTask(args *Arguments, reply *Reply) error {
 		c.mu.Lock()
 		if ourFiles[i].state == StateIdle {
 			reply.Filename = ourFiles[i].filename
+			reply.Nreducetasks = Nreduce
 			ourFiles[i].state = StateWorking // set state to "in progress"
 			return nil
 		}
@@ -91,12 +94,14 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 
 	// fill an array of File structs
 	for i := range files {
-		ourFiles = append(ourFiles, File{filename: files[i], state: 0})
+		ourFiles = append(ourFiles, File{filename: files[i], state: StateIdle})
 	}
 
 	for i := range ourFiles {
 		fmt.Println(ourFiles[i].filename)
 	}
+
+	Nreduce = nReduce
 
 	c.server()
 	return &c

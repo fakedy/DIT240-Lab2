@@ -34,6 +34,7 @@ func Worker(mapf func(string, string) []KeyValue, reducef func(string, []string)
 
 	ok := call("Coordinator.AssignTask", &args, &reply)
 	if ok {
+
 		fmt.Printf("Recieved filename:  %s\n", reply.Filename)
 		// use mapf and reducef here?
 
