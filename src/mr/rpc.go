@@ -31,7 +31,8 @@ type Arguments struct {
 }
 
 type Reply struct {
-	Filename string
+	Filename     string
+	Nreducetasks int
 }
 
 // Cook up a unique-ish UNIX-domain socket name

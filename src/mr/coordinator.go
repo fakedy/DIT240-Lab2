@@ -7,10 +7,12 @@ import (
 	"net/http"
 	"net/rpc"
 	"os"
+	"sync"
 )
 
 type Coordinator struct {
 	// Your definitions here.
+	mu sync.Mutex
 }
 
 var ourFiles []File
@@ -35,11 +37,14 @@ func (c *Coordinator) AssignTask(args *Arguments, reply *Reply) error {
 	// loop through our files and assign a task that have not been processed yet
 	for i := range ourFiles {
 		fmt.Printf("filename: %s\nstate: %d\n", ourFiles[i].filename, ourFiles[i].state)
+		c.mu.Lock()
 		if ourFiles[i].state == 0 {
 			reply.Filename = ourFiles[i].filename
+
 			ourFiles[i].state = 1 // set state to "in progress"
 			return nil
 		}
+		c.mu.Unlock()
 	}
 	return nil
 }

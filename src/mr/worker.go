@@ -1,23 +1,13 @@
 package mr
 
 import (
-	"encoding/json"
 	"fmt"
 	"hash/fnv"
 	"io"
 	"log"
 	"net/rpc"
 	"os"
-	"sort"
 )
-
-// for sorting by key.
-type ByKey []KeyValue
-
-// for sorting by key.
-func (a ByKey) Len() int           { return len(a) }
-func (a ByKey) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a ByKey) Less(i, j int) bool { return a[i].Key < a[j].Key }
 
 // Map functions return a slice of KeyValue.
 type KeyValue struct {
@@ -47,8 +37,6 @@ func Worker(mapf func(string, string) []KeyValue, reducef func(string, []string)
 		fmt.Printf("Recieved filename:  %s\n", reply.Filename)
 		// use mapf and reducef here?
 
-		intermediate := []KeyValue{}
-
 		file, err := os.Open(reply.Filename)
 		if err != nil {
 			log.Fatalf("cannot open %v", reply.Filename)
@@ -59,10 +47,6 @@ func Worker(mapf func(string, string) []KeyValue, reducef func(string, []string)
 		}
 		file.Close()
 		kva := mapf(reply.Filename, string(content))
-
-		intermediate = append(intermediate, kva...)
-
-		sort.Sort(ByKey(intermediate))
 
 	} else {
 		fmt.Printf("call failed!\n")
