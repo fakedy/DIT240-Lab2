@@ -10,6 +10,15 @@ import (
 	"sync"
 )
 
+// Our current state of the worker
+type State int
+
+// Enums for the worker, idle = 0, working = 1. Which iota generates.
+const (
+	StateIdle = iota
+	StateWorking
+)
+
 type Coordinator struct {
 	// Your definitions here.
 	mu sync.Mutex
@@ -19,7 +28,7 @@ var ourFiles []File
 
 type File struct {
 	filename string
-	state    int
+	state    State
 }
 
 // Your code here -- RPC handlers for the worker to call.
@@ -38,10 +47,9 @@ func (c *Coordinator) AssignTask(args *Arguments, reply *Reply) error {
 	for i := range ourFiles {
 		fmt.Printf("filename: %s\nstate: %d\n", ourFiles[i].filename, ourFiles[i].state)
 		c.mu.Lock()
-		if ourFiles[i].state == 0 {
+		if ourFiles[i].state == StateIdle {
 			reply.Filename = ourFiles[i].filename
-
-			ourFiles[i].state = 1 // set state to "in progress"
+			ourFiles[i].state = StateWorking // set state to "in progress"
 			return nil
 		}
 		c.mu.Unlock()
