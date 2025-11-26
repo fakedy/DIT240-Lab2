@@ -96,16 +96,37 @@ func doMAP(mapf func(string, string) []KeyValue, reply *Reply) {
 
 	kva := mapf(reply.Filename, string(content))
 
-	filename := fmt.Sprintf("mr-%d-%d", 0, 0)
-	thatfile, err := os.Create(filename)
+	files := make([]*os.File, reply.Nreducetasks)
+	encoders := make([]*json.Encoder, reply.Nreducetasks)
 
-	enc := json.NewEncoder(thatfile)
+	for i := 0; i < reply.Nreducetasks; i++ {
+		filename := fmt.Sprintf("mr-%d-*", i)
+		thatfile, err := os.CreateTemp("test", filename)
+		if err != nil {
+
+		}
+
+		files[i] = thatfile
+		enc := json.NewEncoder(thatfile)
+		encoders[i] = enc
+	}
 
 	for _, kv := range kva {
+
+		// bucket is an index
+		bucket := ihash(kv.Key) % reply.Nreducetasks
+
+		enc := encoders[bucket]
 		err := enc.Encode(&kv)
 		if err != nil {
+			fmt.Printf("failed to encode: %v", err)
 		}
 	}
+
+	for _, f := range files {
+		f.Close()
+	}
+
 }
 
 func doREDUCE(reducef func(string, []string) string, reply *Reply) {
