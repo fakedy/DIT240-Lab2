@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/rpc"
 	"os"
+	"time"
 )
 
 // Map functions return a slice of KeyValue.
@@ -33,18 +34,26 @@ func Worker(mapf func(string, string) []KeyValue, reducef func(string, []string)
 
 	reply := Reply{}
 
-	ok := call("Coordinator.AssignTask", &args, &reply)
-	if ok {
+	for {
+		ok := call("Coordinator.AssignTask", &args, &reply)
+		if ok {
 
-		switch reply.TaskType {
-		case MAP:
-			doMAP(mapf, &reply)
-		case REDUCE:
-			doREDUCE(reducef, &reply)
+			switch reply.TaskType {
+			case MAP:
+				doMAP(mapf, &reply)
+				call("Coordinator.CompleteTask", &args, &reply)
+			case REDUCE:
+				doREDUCE(reducef, &reply)
+				call("Coordinator.CompleteTask", &args, &reply)
+			case WAIT:
+				time.Sleep(time.Duration(1) * time.Second)
+			default:
+				break
+			}
+
+		} else {
+			fmt.Printf("call failed!\n")
 		}
-
-	} else {
-		fmt.Printf("call failed!\n")
 	}
 
 }
@@ -87,7 +96,7 @@ func doMAP(mapf func(string, string) []KeyValue, reply *Reply) {
 
 	kva := mapf(reply.Filename, string(content))
 
-	filename := fmt.Sprint("mr-%d-%d", 0, 0)
+	filename := fmt.Sprintf("mr-%d-%d", 0, 0)
 	thatfile, err := os.Create(filename)
 
 	enc := json.NewEncoder(thatfile)
@@ -106,7 +115,6 @@ func doREDUCE(reducef func(string, []string) string, reply *Reply) {
 	if err != nil {
 		log.Fatalf("cannot open %v", reply.Filename)
 	}
-	content, err := io.ReadAll(file)
 	if err != nil {
 		log.Fatalf("cannot read %v", reply.Filename)
 	}

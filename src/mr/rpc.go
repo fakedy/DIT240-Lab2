@@ -34,14 +34,16 @@ type Type int
 
 // Enums for the worker, idle = 0, working = 1. Which iota generates.
 const (
-	MAP = iota
+	MAP Type = iota
 	REDUCE
+	WAIT
 )
 
 type Reply struct {
 	Filename     string
 	Nreducetasks int
 	TaskType     Type
+	Id           int
 }
 
 // Cook up a unique-ish UNIX-domain socket name

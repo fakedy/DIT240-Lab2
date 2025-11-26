@@ -30,6 +30,7 @@ type State int
 const (
 	StateIdle = iota
 	StateWorking
+	Mapped
 )
 
 // Your code here -- RPC handlers for the worker to call.
@@ -51,10 +52,20 @@ func (c *Coordinator) AssignTask(args *Arguments, reply *Reply) error {
 			fmt.Printf("filename: %s\nstate: %d\n", ourFiles[i].filename, ourFiles[i].state)
 			reply.Filename = ourFiles[i].filename
 			reply.Nreducetasks = Nreduce
+			reply.Id = i
 			ourFiles[i].state = StateWorking // set state to "in progress"
 			break
 		}
 	}
+	c.mu.Unlock()
+	return nil
+}
+
+func (c *Coordinator) CompleteTask(args *Arguments, reply *Reply) error {
+
+	// loop through our files and assign a task that have not been processed yet
+	c.mu.Lock()
+	ourFiles[reply.Id].state = Mapped
 	c.mu.Unlock()
 	return nil
 }
