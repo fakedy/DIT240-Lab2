@@ -101,9 +101,9 @@ func doMAP(mapf func(string, string) []KeyValue, reply *Reply) {
 
 	for i := 0; i < reply.Nreducetasks; i++ {
 		filename := fmt.Sprintf("mr-%d-*", i)
-		thatfile, err := os.CreateTemp("test", filename)
+		thatfile, err := os.CreateTemp(".", filename)
 		if err != nil {
-
+			log.Fatalf("cannot create file %v", filename)
 		}
 
 		files[i] = thatfile
