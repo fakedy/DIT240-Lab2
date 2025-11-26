@@ -30,9 +30,18 @@ type Arguments struct {
 	X int
 }
 
+type Type int
+
+// Enums for the worker, idle = 0, working = 1. Which iota generates.
+const (
+	MAP = iota
+	REDUCE
+)
+
 type Reply struct {
 	Filename     string
 	Nreducetasks int
+	TaskType     Type
 }
 
 // Cook up a unique-ish UNIX-domain socket name

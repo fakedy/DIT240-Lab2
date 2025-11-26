@@ -35,30 +35,12 @@ func Worker(mapf func(string, string) []KeyValue, reducef func(string, []string)
 
 	ok := call("Coordinator.AssignTask", &args, &reply)
 	if ok {
-		fmt.Printf("Recieved filename:  %s\n", reply.Filename)
-		// use mapf and reducef here?
 
-		file, err := os.Open(reply.Filename)
-		if err != nil {
-			log.Fatalf("cannot open %v", reply.Filename)
-		}
-		content, err := io.ReadAll(file)
-		if err != nil {
-			log.Fatalf("cannot read %v", reply.Filename)
-		}
-		file.Close()
-
-		kva := mapf(reply.Filename, string(content))
-
-		filename := fmt.Sprint("test/mr-%d-%d", 0, 0)
-		thatfile, err := os.Create(filename)
-
-		enc := json.NewEncoder(thatfile)
-
-		for _, kv := range kva {
-			err := enc.Encode(&kv)
-			if err != nil {
-			}
+		switch reply.TaskType {
+		case MAP:
+			doMAP(mapf, &reply)
+		case REDUCE:
+			doREDUCE(reducef, &reply)
 		}
 
 	} else {
@@ -86,4 +68,37 @@ func call(rpcname string, args interface{}, reply interface{}) bool {
 
 	fmt.Println(err)
 	return false
+}
+
+func doMAP(mapf func(string, string) []KeyValue, reply *Reply) {
+
+	fmt.Printf("Recieved filename:  %s\n", reply.Filename)
+	// use mapf and reducef here?
+
+	file, err := os.Open(reply.Filename)
+	if err != nil {
+		log.Fatalf("cannot open %v", reply.Filename)
+	}
+	content, err := io.ReadAll(file)
+	if err != nil {
+		log.Fatalf("cannot read %v", reply.Filename)
+	}
+	file.Close()
+
+	kva := mapf(reply.Filename, string(content))
+
+	filename := fmt.Sprint("mr-%d-%d", 0, 0)
+	thatfile, err := os.Create(filename)
+
+	enc := json.NewEncoder(thatfile)
+
+	for _, kv := range kva {
+		err := enc.Encode(&kv)
+		if err != nil {
+		}
+	}
+}
+
+func doREDUCE(reducef func(string, []string) string, reply *Reply) {
+
 }

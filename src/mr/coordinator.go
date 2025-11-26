@@ -10,16 +10,7 @@ import (
 	"sync"
 )
 
-// Our current state of the worker
-type State int
-
 var Nreduce int
-
-// Enums for the worker, idle = 0, working = 1. Which iota generates.
-const (
-	StateIdle = iota
-	StateWorking
-)
 
 type Coordinator struct {
 	// Your definitions here.
@@ -32,6 +23,14 @@ type File struct {
 	filename string
 	state    State
 }
+
+type State int
+
+// Enums for the worker, idle = 0, working = 1. Which iota generates.
+const (
+	StateIdle = iota
+	StateWorking
+)
 
 // Your code here -- RPC handlers for the worker to call.
 
