@@ -50,7 +50,7 @@ func Worker(mapf func(string, string) []KeyValue, reducef func(string, []string)
 
 		kva := mapf(reply.Filename, string(content))
 
-		filename := fmt.Sprint("mr-%d-%d", 0, 0)
+		filename := fmt.Sprint("test/mr-%d-%d", 0, 0)
 		thatfile, err := os.Create(filename)
 
 		enc := json.NewEncoder(thatfile)

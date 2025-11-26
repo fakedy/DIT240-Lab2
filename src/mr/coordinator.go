@@ -46,17 +46,17 @@ func (c *Coordinator) Example(args *ExampleArgs, reply *ExampleReply) error {
 func (c *Coordinator) AssignTask(args *Arguments, reply *Reply) error {
 
 	// loop through our files and assign a task that have not been processed yet
+	c.mu.Lock()
 	for i := range ourFiles {
-		fmt.Printf("filename: %s\nstate: %d\n", ourFiles[i].filename, ourFiles[i].state)
-		c.mu.Lock()
 		if ourFiles[i].state == StateIdle {
+			fmt.Printf("filename: %s\nstate: %d\n", ourFiles[i].filename, ourFiles[i].state)
 			reply.Filename = ourFiles[i].filename
 			reply.Nreducetasks = Nreduce
 			ourFiles[i].state = StateWorking // set state to "in progress"
-			return nil
+			break
 		}
-		c.mu.Unlock()
 	}
+	c.mu.Unlock()
 	return nil
 }
 
