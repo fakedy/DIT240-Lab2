@@ -34,6 +34,9 @@ func Worker(mapf func(string, string) []KeyValue, reducef func(string, []string)
 
 	reply := Reply{}
 
+	completeReply := Reply{}
+	completeArgs := Arguments{reply.Id, reply.TaskType}
+
 	for {
 		ok := call("Coordinator.AssignTask", &args, &reply)
 		if ok {
@@ -41,10 +44,10 @@ func Worker(mapf func(string, string) []KeyValue, reducef func(string, []string)
 			switch reply.TaskType {
 			case MAP:
 				doMAP(mapf, &reply)
-				call("Coordinator.CompleteTask", &args, &reply)
+				call("Coordinator.CompleteTask", &completeArgs, &completeReply)
 			case REDUCE:
 				doREDUCE(reducef, &reply)
-				call("Coordinator.CompleteTask", &args, &reply)
+				call("Coordinator.CompleteTask", &completeArgs, &completeReply)
 			case WAIT:
 				time.Sleep(time.Duration(1) * time.Second)
 			default:
@@ -101,8 +104,8 @@ func doMAP(mapf func(string, string) []KeyValue, reply *Reply) {
 
 	// create NReduce intermediate files
 	for i := 0; i < reply.Nreducetasks; i++ {
-		filename := fmt.Sprintf("mr-%d-%d", reply.Id, i)
-		thatfile, err := os.Create(filename)
+		filename := fmt.Sprintf("mr-%d-*", reply.Id)
+		thatfile, err := os.CreateTemp(".", filename)
 		if err != nil {
 			log.Fatalf("cannot create file %v", filename)
 		}
@@ -124,13 +127,10 @@ func doMAP(mapf func(string, string) []KeyValue, reply *Reply) {
 		}
 	}
 
-	for _, f := range files {
+	for i, f := range files {
 		f.Close()
-	}
-
-	for i := 0; i < reply.Nreducetasks; i++ {
 		finalName := fmt.Sprintf("mr-%d-%d", reply.Id, i)
-		err := os.Rename(files[i].Name(), finalName)
+		os.Rename(f.Name(), finalName)
 		if err != nil {
 			log.Fatalf("cannot rename")
 		}

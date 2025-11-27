@@ -27,7 +27,8 @@ type ExampleReply struct {
 // Add your RPC definitions here.
 
 type Arguments struct {
-	X int
+	Id       int
+	TaskType Type
 }
 
 type Type int

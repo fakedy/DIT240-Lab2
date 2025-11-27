@@ -29,8 +29,10 @@ type State int
 // Enums for the worker, idle = 0, working = 1, Mapped = 2. Which iota generates.
 const (
 	StateIdle = iota
-	StateWorking
+	Mapping
 	Mapped
+	Reducing
+	Finished
 )
 
 // Your code here -- RPC handlers for the worker to call.
@@ -53,19 +55,52 @@ func (c *Coordinator) AssignTask(args *Arguments, reply *Reply) error {
 			reply.Filename = ourFiles[i].filename
 			reply.Nreducetasks = Nreduce
 			reply.Id = i
-			ourFiles[i].state = StateWorking // set state to "in progress"
+			reply.TaskType = MAP
+			ourFiles[i].state = Mapping // set state to "in progress"
 			break
 		}
 	}
+
+	// if all map tasks are done
+	if mapDone() {
+		for i := range ourFiles {
+			if ourFiles[i].state == StateIdle {
+				fmt.Printf("filename: %s\nstate: %d\n", ourFiles[i].filename, ourFiles[i].state)
+				reply.Filename = ourFiles[i].filename
+				reply.Id = i
+				reply.TaskType = REDUCE
+				ourFiles[i].state = Reducing // set state to "in progress"
+				break
+			}
+		}
+	}
+
 	c.mu.Unlock()
 	return nil
+}
+
+func mapDone() bool {
+
+	// Your code here.
+	for i := range ourFiles {
+		if ourFiles[i].state != Mapped {
+			return false
+		}
+	}
+
+	return true
+
 }
 
 func (c *Coordinator) CompleteTask(args *Arguments, reply *Reply) error {
 
 	// loop through our files and assign a task that have not been processed yet
 	c.mu.Lock()
-	ourFiles[reply.Id].state = Mapped
+	if args.TaskType == MAP {
+		ourFiles[args.Id].state = Mapped
+	} else {
+	}
+
 	c.mu.Unlock()
 	return nil
 }
@@ -87,11 +122,15 @@ func (c *Coordinator) server() {
 // main/mrcoordinator.go calls Done() periodically to find out
 // if the entire job has finished.
 func (c *Coordinator) Done() bool {
-	ret := false
 
 	// Your code here.
+	for i := range ourFiles {
+		if ourFiles[i].state != Finished {
+			return false
+		}
+	}
 
-	return ret
+	return true
 }
 
 // create a Coordinator.
