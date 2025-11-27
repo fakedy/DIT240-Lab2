@@ -99,16 +99,19 @@ func doMAP(mapf func(string, string) []KeyValue, reply *Reply) {
 	files := make([]*os.File, reply.Nreducetasks)
 	encoders := make([]*json.Encoder, reply.Nreducetasks)
 
+	// create NReduce intermediate files
 	for i := 0; i < reply.Nreducetasks; i++ {
-		filename := fmt.Sprintf("mr-%d-*", i)
-		thatfile, err := os.CreateTemp(".", filename)
+		filename := fmt.Sprintf("mr-%d-%d", reply.Id, i)
+		thatfile, err := os.Create(filename)
 		if err != nil {
 			log.Fatalf("cannot create file %v", filename)
 		}
 
+		// add these files and their encoder to an array
 		files[i] = thatfile
 		enc := json.NewEncoder(thatfile)
 		encoders[i] = enc
+
 	}
 
 	for _, kv := range kva {
