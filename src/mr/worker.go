@@ -152,8 +152,6 @@ func doREDUCE(reducef func(string, []string) string, reply *Reply) {
 
 	fileprefix := fmt.Sprintf("mr-%d", reply.Id)
 
-	fmt.Sscan()
-
 	for i, file := range allfiles {
 		if strings.HasPrefix(file.Name(), fileprefix) {
 			files[i] = file
