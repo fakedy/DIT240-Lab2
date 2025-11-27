@@ -154,19 +154,23 @@ func doREDUCE(reducef func(string, []string) string, reply *Reply) {
 
 	var files []os.DirEntry
 
+	//read all files in current directory
 	allfiles, err := os.ReadDir(".")
 	if err != nil {
 		log.Fatal("read error", err)
 	}
 
+	//prefix for files with name mr-ID
 	fileprefix := fmt.Sprintf("mr-%d", reply.Id)
 
+	//filter out the files with with name mr-ID from all files
 	for _, file := range allfiles {
 		if strings.HasPrefix(file.Name(), fileprefix) {
 			files = append(files, file)
 		}
 	}
 
+	//open each file and decodes json thing and then rebuilds kva from contents
 	for _, f := range files {
 		file, err := os.Open(f.Name())
 		if err != nil {
@@ -180,16 +184,19 @@ func doREDUCE(reducef func(string, []string) string, reply *Reply) {
 			}
 			kva = append(kva, kv)
 		}
+		file.Close()
 	}
 
+	//sort kva
 	sort.Sort(ByKey(kva))
 
+	//create file with name mr-out-ID for reduce output
 	oname := fmt.Sprintf("mr-out-%d", reply.Id)
 	ofile, _ := os.Create(oname)
 
 	//
 	// call Reduce on each distinct key in kva[],
-	// and print the result to mr-out-0.
+	// and print the result to mr-out-ID.
 	//
 	i := 0
 	for i < len(kva) {
