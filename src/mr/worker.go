@@ -142,29 +142,18 @@ func doMAP(mapf func(string, string) []KeyValue, reply *Reply) {
 func doREDUCE(reducef func(string, []string) string, reply *Reply) {
 	var kva []KeyValue
 
-	file, err := os.Open(files[1].Name())
-	if err != nil {
-		log.Fatalf("cannot open %v", reply.Filename)
-	}
-	if err != nil {
-		log.Fatalf("cannot read %v", reply.Filename)
-	}
-	file.Close()
-
-	for i, f := range files {
-
-	}
-
-	dec := json.NewDecoder(file)
-	for {
-		var kv KeyValue
-		if err := dec.Decode(&kv); err != nil {
-			break
+	for _, f := range files {
+		dec := json.NewDecoder(f)
+		for {
+			var kv KeyValue
+			if err := dec.Decode(&kv); err != nil {
+				break
+			}
+			kva = append(kva, kv)
 		}
-		kva = append(kva, kv)
 	}
 
-	oname := "mr-out-0"
+	oname := fmt.Sprintf("mr-out-%d", reply.Id)
 	ofile, _ := os.Create(oname)
 
 	//
