@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/rpc"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -142,8 +143,29 @@ func doMAP(mapf func(string, string) []KeyValue, reply *Reply) {
 func doREDUCE(reducef func(string, []string) string, reply *Reply) {
 	var kva []KeyValue
 
+	var files []os.DirEntry
+
+	allfiles, err := os.ReadDir(".")
+	if err != nil {
+		log.Fatal("read error", err)
+	}
+
+	fileprefix := fmt.Sprintf("mr-%d", reply.Id)
+
+	fmt.Sscan()
+
+	for i, file := range allfiles {
+		if strings.HasPrefix(file.Name(), fileprefix) {
+			files[i] = file
+		}
+	}
+
 	for _, f := range files {
-		dec := json.NewDecoder(f)
+		file, err := os.Open(f.Name())
+		if err != nil {
+			log.Fatal("read error", err)
+		}
+		dec := json.NewDecoder(file)
 		for {
 			var kv KeyValue
 			if err := dec.Decode(&kv); err != nil {
