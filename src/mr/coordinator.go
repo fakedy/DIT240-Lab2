@@ -95,7 +95,6 @@ func mapDone() bool {
 
 	fmt.Println("Mapping done")
 	return true
-
 }
 
 func (c *Coordinator) CompleteTask(args *Arguments, reply *Reply) error {
@@ -106,6 +105,7 @@ func (c *Coordinator) CompleteTask(args *Arguments, reply *Reply) error {
 	if args.TaskType == MAP {
 		ourFiles[args.Id].state = Mapped
 	} else {
+		ourFiles[args.Id].state = Finished
 	}
 
 	c.mu.Unlock()
