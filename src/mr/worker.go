@@ -8,9 +8,18 @@ import (
 	"log"
 	"net/rpc"
 	"os"
+	"sort"
 	"strings"
 	"time"
 )
+
+// for sorting by key.
+type ByKey []KeyValue
+
+// for sorting by key.
+func (a ByKey) Len() int           { return len(a) }
+func (a ByKey) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByKey) Less(i, j int) bool { return a[i].Key < a[j].Key }
 
 // Map functions return a slice of KeyValue.
 type KeyValue struct {
@@ -172,6 +181,8 @@ func doREDUCE(reducef func(string, []string) string, reply *Reply) {
 			kva = append(kva, kv)
 		}
 	}
+
+	sort.Sort(ByKey(kva))
 
 	oname := fmt.Sprintf("mr-out-%d", reply.Id)
 	ofile, _ := os.Create(oname)
