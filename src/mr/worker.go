@@ -17,6 +17,8 @@ type KeyValue struct {
 	Value string
 }
 
+var files []*os.File
+
 // use ihash(key) % NReduce to choose the reduce
 // task number for each KeyValue emitted by Map.
 func ihash(key string) int {
@@ -34,11 +36,10 @@ func Worker(mapf func(string, string) []KeyValue, reducef func(string, []string)
 
 	reply := Reply{}
 
-	completeReply := Reply{}
-	completeArgs := Arguments{reply.Id, reply.TaskType}
-
 	for {
 		ok := call("Coordinator.AssignTask", &args, &reply)
+		completeReply := Reply{}
+		completeArgs := Arguments{reply.Id, reply.TaskType}
 		if ok {
 
 			switch reply.TaskType {
@@ -99,7 +100,7 @@ func doMAP(mapf func(string, string) []KeyValue, reply *Reply) {
 
 	kva := mapf(reply.Filename, string(content))
 
-	files := make([]*os.File, reply.Nreducetasks)
+	files = make([]*os.File, reply.Nreducetasks)
 	encoders := make([]*json.Encoder, reply.Nreducetasks)
 
 	// create NReduce intermediate files
@@ -141,7 +142,7 @@ func doMAP(mapf func(string, string) []KeyValue, reply *Reply) {
 func doREDUCE(reducef func(string, []string) string, reply *Reply) {
 	var kva []KeyValue
 
-	file, err := os.Open(reply.Filename)
+	file, err := os.Open(files[1].Name())
 	if err != nil {
 		log.Fatalf("cannot open %v", reply.Filename)
 	}
@@ -149,6 +150,10 @@ func doREDUCE(reducef func(string, []string) string, reply *Reply) {
 		log.Fatalf("cannot read %v", reply.Filename)
 	}
 	file.Close()
+
+	for i, f := range files {
+
+	}
 
 	dec := json.NewDecoder(file)
 	for {

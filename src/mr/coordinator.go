@@ -57,23 +57,27 @@ func (c *Coordinator) AssignTask(args *Arguments, reply *Reply) error {
 			reply.Id = i
 			reply.TaskType = MAP
 			ourFiles[i].state = Mapping // set state to "in progress"
-			break
+			c.mu.Unlock()
+			return nil
 		}
 	}
 
 	// if all map tasks are done
 	if mapDone() {
 		for i := range ourFiles {
-			if ourFiles[i].state == StateIdle {
+			if ourFiles[i].state == Mapped {
 				fmt.Printf("filename: %s\nstate: %d\n", ourFiles[i].filename, ourFiles[i].state)
 				reply.Filename = ourFiles[i].filename
 				reply.Id = i
 				reply.TaskType = REDUCE
 				ourFiles[i].state = Reducing // set state to "in progress"
-				break
+				c.mu.Unlock()
+				return nil
 			}
 		}
 	}
+
+	reply.TaskType = WAIT
 
 	c.mu.Unlock()
 	return nil
@@ -84,16 +88,19 @@ func mapDone() bool {
 	// Your code here.
 	for i := range ourFiles {
 		if ourFiles[i].state != Mapped {
+			fmt.Println("Mapping not done")
 			return false
 		}
 	}
 
+	fmt.Println("Mapping done")
 	return true
 
 }
 
 func (c *Coordinator) CompleteTask(args *Arguments, reply *Reply) error {
 
+	fmt.Printf("Task completed: %d\n", args.TaskType)
 	// loop through our files and assign a task that have not been processed yet
 	c.mu.Lock()
 	if args.TaskType == MAP {
