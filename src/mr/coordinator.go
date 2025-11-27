@@ -51,7 +51,7 @@ func (c *Coordinator) AssignTask(args *Arguments, reply *Reply) error {
 	c.mu.Lock()
 	for i := range ourFiles {
 		if ourFiles[i].state == StateIdle {
-			fmt.Printf("filename: %s\nstate: %d\n", ourFiles[i].filename, ourFiles[i].state)
+			fmt.Printf("filename: %s state: %d ID: %d\n", ourFiles[i].filename, ourFiles[i].state, i)
 			reply.Filename = ourFiles[i].filename
 			reply.Nreducetasks = Nreduce
 			reply.Id = i
@@ -66,7 +66,7 @@ func (c *Coordinator) AssignTask(args *Arguments, reply *Reply) error {
 	if mapDone() {
 		for i := range ourFiles {
 			if ourFiles[i].state == Mapped {
-				fmt.Printf("filename: %s\nstate: %d\n", ourFiles[i].filename, ourFiles[i].state)
+				fmt.Printf("filename: %s state: %d ID: %d\n", ourFiles[i].filename, ourFiles[i].state, i)
 				reply.Filename = ourFiles[i].filename
 				reply.Id = i
 				reply.TaskType = REDUCE
@@ -87,7 +87,7 @@ func mapDone() bool {
 
 	// Your code here.
 	for i := range ourFiles {
-		if ourFiles[i].state != Mapped {
+		if ourFiles[i].state < Mapped {
 			fmt.Println("Mapping not done")
 			return false
 		}

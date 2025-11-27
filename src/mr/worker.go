@@ -46,6 +46,7 @@ func Worker(mapf func(string, string) []KeyValue, reducef func(string, []string)
 
 	for {
 		ok := call("Coordinator.AssignTask", &args, &reply)
+		fmt.Printf("ID: %d\n", reply.Id)
 		completeReply := Reply{}
 		completeArgs := Arguments{reply.Id, reply.TaskType}
 		if ok {
