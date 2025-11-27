@@ -26,7 +26,7 @@ type File struct {
 
 type State int
 
-// Enums for the worker, idle = 0, working = 1. Which iota generates.
+// Enums for the worker, idle = 0, working = 1, Mapped = 2. Which iota generates.
 const (
 	StateIdle = iota
 	StateWorking

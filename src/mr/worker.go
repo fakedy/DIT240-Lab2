@@ -115,10 +115,8 @@ func doMAP(mapf func(string, string) []KeyValue, reply *Reply) {
 	}
 
 	for _, kv := range kva {
-
 		// bucket is an index
 		bucket := ihash(kv.Key) % reply.Nreducetasks
-
 		enc := encoders[bucket]
 		err := enc.Encode(&kv)
 		if err != nil {
@@ -128,6 +126,14 @@ func doMAP(mapf func(string, string) []KeyValue, reply *Reply) {
 
 	for _, f := range files {
 		f.Close()
+	}
+
+	for i := 0; i < reply.Nreducetasks; i++ {
+		finalName := fmt.Sprintf("mr-%d-%d", reply.Id, i)
+		err := os.Rename(files[i].Name(), finalName)
+		if err != nil {
+			log.Fatalf("cannot rename")
+		}
 	}
 
 }
