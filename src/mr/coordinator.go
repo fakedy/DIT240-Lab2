@@ -99,13 +99,15 @@ func mapDone() bool {
 
 func (c *Coordinator) CompleteTask(args *Arguments, reply *Reply) error {
 
-	fmt.Printf("Task completed: %d\n", args.TaskType)
 	// loop through our files and assign a task that have not been processed yet
 	c.mu.Lock()
-	if args.TaskType == MAP {
+	switch args.TaskType {
+	case MAP:
 		ourFiles[args.Id].state = Mapped
-	} else {
+		fmt.Printf("Map Task completed: %d\n", args.Id)
+	case REDUCE:
 		ourFiles[args.Id].state = Finished
+		fmt.Printf("Reduce Task completed: %d\n", args.Id)
 	}
 
 	c.mu.Unlock()
@@ -129,14 +131,16 @@ func (c *Coordinator) server() {
 // main/mrcoordinator.go calls Done() periodically to find out
 // if the entire job has finished.
 func (c *Coordinator) Done() bool {
-
+	c.mu.Lock()
 	// Your code here.
 	for i := range ourFiles {
 		if ourFiles[i].state != Finished {
+			c.mu.Unlock()
 			return false
 		}
 	}
 
+	c.mu.Unlock()
 	return true
 }
 

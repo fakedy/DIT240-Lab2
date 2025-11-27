@@ -27,8 +27,6 @@ type KeyValue struct {
 	Value string
 }
 
-var files []*os.File
-
 // use ihash(key) % NReduce to choose the reduce
 // task number for each KeyValue emitted by Map.
 func ihash(key string) int {
@@ -110,7 +108,7 @@ func doMAP(mapf func(string, string) []KeyValue, reply *Reply) {
 
 	kva := mapf(reply.Filename, string(content))
 
-	files = make([]*os.File, reply.Nreducetasks)
+	files := make([]*os.File, reply.Nreducetasks)
 	encoders := make([]*json.Encoder, reply.Nreducetasks)
 
 	// create NReduce intermediate files
@@ -150,6 +148,8 @@ func doMAP(mapf func(string, string) []KeyValue, reply *Reply) {
 }
 
 func doREDUCE(reducef func(string, []string) string, reply *Reply) {
+
+	fmt.Printf("doing reduce on task ID: %d\n", reply.Id)
 	var kva []KeyValue
 
 	var files []os.DirEntry
