@@ -111,7 +111,7 @@ func doMAP(mapf func(string, string) []KeyValue, reply *Reply) {
 
 	// create NReduce intermediate files
 	for i := 0; i < reply.Nreducetasks; i++ {
-		filename := fmt.Sprintf("mr-%d-*", reply.Id)
+		filename := fmt.Sprintf("mr-temp-%d-*", reply.Id)
 		thatfile, err := os.CreateTemp(".", filename)
 		if err != nil {
 			log.Fatalf("Could not create file: %v", filename)
