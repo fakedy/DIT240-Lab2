@@ -172,7 +172,7 @@ func doREDUCE(reducef func(string, []string) string, reply *Reply) {
 	for _, f := range files {
 		file, err := os.Open(f.Name())
 		if err != nil {
-			log.Fatal("read error", err)
+			log.Fatal("Could not open file\n", err)
 		}
 		dec := json.NewDecoder(file)
 		for {
@@ -215,4 +215,9 @@ func doREDUCE(reducef func(string, []string) string, reply *Reply) {
 	}
 
 	ofile.Close()
+
+	// remove intermediate files
+	for _, f := range files {
+		os.Remove(f.Name())
+	}
 }
