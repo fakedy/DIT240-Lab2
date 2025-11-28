@@ -8,6 +8,7 @@ import (
 	"net/rpc"
 	"os"
 	"sync"
+	"time"
 )
 
 var Nreduce int
@@ -16,6 +17,7 @@ type Coordinator struct {
 	// Your definitions here.
 	mu            sync.Mutex
 	isMappingDone bool
+	workerTimes   []time.Time
 }
 
 var ourFiles []File
@@ -61,6 +63,7 @@ func (c *Coordinator) AssignTask(args *Arguments, reply *Reply) error {
 				reply.Id = i
 				reply.TaskType = MAP
 				ourFiles[i].state = Mapping // set state to "in progress"
+				c.workerTimes[i] = time.Now()
 				c.mu.Unlock()
 				return nil
 			}
@@ -72,6 +75,7 @@ func (c *Coordinator) AssignTask(args *Arguments, reply *Reply) error {
 				reply.Id = i
 				reply.TaskType = REDUCE
 				ourFiles[i].state = Reducing // set state to "in progress"
+				c.workerTimes[i] = time.Now()
 				fmt.Printf("Starting Reduce task on ID: %d\n", reply.Id)
 				c.mu.Unlock()
 				return nil
@@ -147,6 +151,23 @@ func (c *Coordinator) Done() bool {
 	return true
 }
 
+func (c *Coordinator) checkWorkers() {
+
+	for {
+		c.mu.Lock()
+		for i := range c.workerTimes {
+			if ourFiles[i].state == Mapping && time.Since(c.workerTimes[i]) >= time.Duration(10)*time.Second {
+				ourFiles[i].state = StateIdle
+			} else if ourFiles[i].state == Reducing && time.Since(c.workerTimes[i]) >= time.Duration(10)*time.Second {
+				ourFiles[i].state = Mapped
+			}
+
+		}
+		c.mu.Unlock()
+		time.Sleep(time.Second * time.Duration(10))
+	}
+}
+
 // create a Coordinator.
 // main/mrcoordinator.go calls this function.
 // nReduce is the number of reduce tasks to use.
@@ -166,6 +187,11 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	}
 
 	Nreduce = nReduce
+
+	// Append 5 nil pointers to the end
+	c.workerTimes = append(c.workerTimes, make([]time.Time, len(files))...)
+
+	go c.checkWorkers()
 
 	c.server()
 	return &c
