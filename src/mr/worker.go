@@ -111,7 +111,7 @@ func doMAP(mapf func(string, string) []KeyValue, reply *Reply) {
 
 	// create NReduce intermediate files
 	for i := 0; i < reply.Nreducetasks; i++ {
-		filename := fmt.Sprintf("mr-temp-%d-*", reply.Id)
+		filename := fmt.Sprintf("mr-%d-*", reply.Id)
 		thatfile, err := os.CreateTemp(".", filename)
 		if err != nil {
 			log.Fatalf("Could not create file: %v", filename)
@@ -157,13 +157,14 @@ func doREDUCE(reducef func(string, []string) string, reply *Reply) {
 	if err != nil {
 		log.Fatal("read error", err)
 	}
-
+	
 	//prefix for files with name mr-ID
-	fileprefix := fmt.Sprintf("mr-%d", reply.Id)
+	fileSuffix:= fmt.Sprintf("-%d", reply.Id)
 
 	//filter out the files with with name mr-ID from all files
 	for _, file := range allfiles {
-		if strings.HasPrefix(file.Name(), fileprefix) {
+		fileName := file.Name()
+		if(strings.HasPrefix(fileName, "mr-") && strings.HasSuffix(fileName, fileSuffix)){
 			files = append(files, file)
 		}
 	}
