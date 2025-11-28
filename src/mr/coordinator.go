@@ -155,10 +155,13 @@ func (c *Coordinator) checkWorkers() {
 		for i := range c.mapWorkerTimes {
 			if c.ourFiles[i].state == Working && time.Since(c.mapWorkerTimes[i]) >= time.Duration(10)*time.Second {
 				c.ourFiles[i].state = StateIdle
-			} else if c.reduceTasks[i].state == Working && time.Since(c.reduceWorkerTimes[i]) >= time.Duration(10)*time.Second {
-				c.reduceTasks[i].state = StateIdle
 			}
 
+		}
+		for i := range c.reduceTasks {
+			if c.reduceTasks[i].state == Working && time.Since(c.reduceWorkerTimes[i]) >= time.Duration(10)*time.Second {
+				c.reduceTasks[i].state = StateIdle
+			}
 		}
 		c.mu.Unlock()
 		time.Sleep(time.Second * time.Duration(10))

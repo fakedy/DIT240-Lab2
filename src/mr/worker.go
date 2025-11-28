@@ -157,14 +157,14 @@ func doREDUCE(reducef func(string, []string) string, reply *Reply) {
 	if err != nil {
 		log.Fatal("read error", err)
 	}
-	
+
 	//prefix for files with name mr-ID
-	fileSuffix:= fmt.Sprintf("-%d", reply.Id)
+	fileSuffix := fmt.Sprintf("-%d", reply.Id)
 
 	//filter out the files with with name mr-ID from all files
 	for _, file := range allfiles {
 		fileName := file.Name()
-		if(strings.HasPrefix(fileName, "mr-") && strings.HasSuffix(fileName, fileSuffix)){
+		if strings.HasPrefix(fileName, "mr-") && strings.HasSuffix(fileName, fileSuffix) && !strings.Contains(fileName, "mr-out") {
 			files = append(files, file)
 		}
 	}
