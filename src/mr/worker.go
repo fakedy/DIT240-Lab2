@@ -40,13 +40,10 @@ func Worker(mapf func(string, string) []KeyValue, reducef func(string, []string)
 
 	// Your worker implementation here.
 
-	args := Arguments{}
-
-	reply := Reply{}
-
 	for {
+		args := Arguments{}
+		reply := Reply{}
 		ok := call("Coordinator.AssignTask", &args, &reply)
-		fmt.Printf("ID: %d\n", reply.Id)
 		completeReply := Reply{}
 		completeArgs := Arguments{reply.Id, reply.TaskType}
 		if ok {
@@ -65,7 +62,7 @@ func Worker(mapf func(string, string) []KeyValue, reducef func(string, []string)
 			}
 
 		} else {
-			fmt.Printf("call failed!\n")
+			fmt.Printf("Call failed!\n")
 		}
 	}
 
@@ -94,16 +91,16 @@ func call(rpcname string, args interface{}, reply interface{}) bool {
 
 func doMAP(mapf func(string, string) []KeyValue, reply *Reply) {
 
-	fmt.Printf("Recieved filename:  %s\n", reply.Filename)
+	fmt.Printf("Performing MAP on file:  %s\n", reply.Filename)
 	// use mapf and reducef here?
 
 	file, err := os.Open(reply.Filename)
 	if err != nil {
-		log.Fatalf("cannot open %v", reply.Filename)
+		log.Fatalf("Could not open: %v", reply.Filename)
 	}
 	content, err := io.ReadAll(file)
 	if err != nil {
-		log.Fatalf("cannot read %v", reply.Filename)
+		log.Fatalf("Could not read: %v", reply.Filename)
 	}
 	file.Close()
 
@@ -117,7 +114,7 @@ func doMAP(mapf func(string, string) []KeyValue, reply *Reply) {
 		filename := fmt.Sprintf("mr-%d-*", reply.Id)
 		thatfile, err := os.CreateTemp(".", filename)
 		if err != nil {
-			log.Fatalf("cannot create file %v", filename)
+			log.Fatalf("Could not create file: %v", filename)
 		}
 
 		// add these files and their encoder to an array
@@ -133,7 +130,7 @@ func doMAP(mapf func(string, string) []KeyValue, reply *Reply) {
 		enc := encoders[bucket]
 		err := enc.Encode(&kv)
 		if err != nil {
-			fmt.Printf("failed to encode: %v", err)
+			fmt.Printf("Failed to encode: %v\n", err)
 		}
 	}
 
@@ -142,7 +139,7 @@ func doMAP(mapf func(string, string) []KeyValue, reply *Reply) {
 		finalName := fmt.Sprintf("mr-%d-%d", reply.Id, i)
 		os.Rename(f.Name(), finalName)
 		if err != nil {
-			log.Fatalf("cannot rename")
+			log.Fatalf("Could not rename file\n")
 		}
 	}
 
@@ -150,7 +147,7 @@ func doMAP(mapf func(string, string) []KeyValue, reply *Reply) {
 
 func doREDUCE(reducef func(string, []string) string, reply *Reply) {
 
-	fmt.Printf("doing reduce on task ID: %d\n", reply.Id)
+	fmt.Printf("Performing reduce on task ID: %d\n", reply.Id)
 	var kva []KeyValue
 
 	var files []os.DirEntry

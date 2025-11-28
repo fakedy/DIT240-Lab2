@@ -14,7 +14,8 @@ var Nreduce int
 
 type Coordinator struct {
 	// Your definitions here.
-	mu sync.Mutex
+	mu            sync.Mutex
+	isMappingDone bool
 }
 
 var ourFiles []File
@@ -49,28 +50,29 @@ func (c *Coordinator) AssignTask(args *Arguments, reply *Reply) error {
 
 	// loop through our files and assign a task that have not been processed yet
 	c.mu.Lock()
-	for i := range ourFiles {
-		if ourFiles[i].state == StateIdle {
-			fmt.Printf("filename: %s state: %d ID: %d\n", ourFiles[i].filename, ourFiles[i].state, i)
-			reply.Filename = ourFiles[i].filename
-			reply.Nreducetasks = Nreduce
-			reply.Id = i
-			reply.TaskType = MAP
-			ourFiles[i].state = Mapping // set state to "in progress"
-			c.mu.Unlock()
-			return nil
-		}
-	}
 
-	// if all map tasks are done
-	if mapDone() {
+	// if mapping is not done
+	if !c.isMappingDone {
 		for i := range ourFiles {
-			if ourFiles[i].state == Mapped {
+			if ourFiles[i].state == StateIdle {
 				fmt.Printf("filename: %s state: %d ID: %d\n", ourFiles[i].filename, ourFiles[i].state, i)
 				reply.Filename = ourFiles[i].filename
+				reply.Nreducetasks = Nreduce
+				reply.Id = i
+				reply.TaskType = MAP
+				ourFiles[i].state = Mapping // set state to "in progress"
+				c.mu.Unlock()
+				return nil
+			}
+		}
+	} else {
+		// if all map tasks are done
+		for i := range ourFiles {
+			if ourFiles[i].state == Mapped {
 				reply.Id = i
 				reply.TaskType = REDUCE
 				ourFiles[i].state = Reducing // set state to "in progress"
+				fmt.Printf("Starting Reduce task on ID: %d\n", reply.Id)
 				c.mu.Unlock()
 				return nil
 			}
@@ -105,11 +107,12 @@ func (c *Coordinator) CompleteTask(args *Arguments, reply *Reply) error {
 	case MAP:
 		ourFiles[args.Id].state = Mapped
 		fmt.Printf("Map Task completed: %d\n", args.Id)
+		// check if all tasks are mapped
+		c.isMappingDone = mapDone()
 	case REDUCE:
 		ourFiles[args.Id].state = Finished
-		fmt.Printf("Reduce Task completed: %d\n", args.Id)
+		fmt.Printf("Reduce Task completed with ID: %d\n", args.Id)
 	}
-
 	c.mu.Unlock()
 	return nil
 }
@@ -151,6 +154,7 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	c := Coordinator{}
 
 	// Your code here.
+	c.isMappingDone = false
 
 	// fill an array of File structs
 	for i := range files {
