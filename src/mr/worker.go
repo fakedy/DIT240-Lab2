@@ -91,7 +91,7 @@ func call(rpcname string, args interface{}, reply interface{}) bool {
 
 func doMAP(mapf func(string, string) []KeyValue, reply *Reply) {
 
-	fmt.Printf("Performing MAP on file:  %s\n", reply.Filename)
+	//fmt.Printf("Performing MAP on file:  %s\n", reply.Filename)
 	// use mapf and reducef here?
 
 	file, err := os.Open(reply.Filename)
@@ -147,7 +147,7 @@ func doMAP(mapf func(string, string) []KeyValue, reply *Reply) {
 
 func doREDUCE(reducef func(string, []string) string, reply *Reply) {
 
-	fmt.Printf("Performing reduce on task ID: %d\n", reply.Id)
+	//fmt.Printf("Performing reduce on task ID: %d\n", reply.Id)
 	var kva []KeyValue
 
 	var files []os.DirEntry

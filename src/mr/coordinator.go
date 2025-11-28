@@ -1,7 +1,6 @@
 package mr
 
 import (
-	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -11,16 +10,14 @@ import (
 	"time"
 )
 
-var Nreduce int
-
 type Coordinator struct {
 	// Your definitions here.
 	mu            sync.Mutex
 	isMappingDone bool
 	workerTimes   []time.Time
+	Nreduce       int
+	ourFiles      []File
 }
-
-var ourFiles []File
 
 type File struct {
 	filename string
@@ -55,14 +52,14 @@ func (c *Coordinator) AssignTask(args *Arguments, reply *Reply) error {
 
 	// if mapping is not done
 	if !c.isMappingDone {
-		for i := range ourFiles {
-			if ourFiles[i].state == StateIdle {
-				fmt.Printf("filename: %s state: %d ID: %d\n", ourFiles[i].filename, ourFiles[i].state, i)
-				reply.Filename = ourFiles[i].filename
-				reply.Nreducetasks = Nreduce
+		for i := range c.ourFiles {
+			if c.ourFiles[i].state == StateIdle {
+				//fmt.Printf("filename: %s state: %d ID: %d\n", ourFiles[i].filename, ourFiles[i].state, i)
+				reply.Filename = c.ourFiles[i].filename
+				reply.Nreducetasks = c.Nreduce
 				reply.Id = i
 				reply.TaskType = MAP
-				ourFiles[i].state = Mapping // set state to "in progress"
+				c.ourFiles[i].state = Mapping // set state to "in progress"
 				c.workerTimes[i] = time.Now()
 				c.mu.Unlock()
 				return nil
@@ -70,13 +67,13 @@ func (c *Coordinator) AssignTask(args *Arguments, reply *Reply) error {
 		}
 	} else {
 		// if all map tasks are done
-		for i := range ourFiles {
-			if ourFiles[i].state == Mapped {
+		for i := range c.ourFiles {
+			if c.ourFiles[i].state == Mapped {
 				reply.Id = i
 				reply.TaskType = REDUCE
-				ourFiles[i].state = Reducing // set state to "in progress"
+				c.ourFiles[i].state = Reducing // set state to "in progress"
 				c.workerTimes[i] = time.Now()
-				fmt.Printf("Starting Reduce task on ID: %d\n", reply.Id)
+				//fmt.Printf("Starting Reduce task on ID: %d\n", reply.Id)
 				c.mu.Unlock()
 				return nil
 			}
@@ -89,17 +86,17 @@ func (c *Coordinator) AssignTask(args *Arguments, reply *Reply) error {
 	return nil
 }
 
-func mapDone() bool {
+func (c *Coordinator) mapDone() bool {
 
 	// Your code here.
-	for i := range ourFiles {
-		if ourFiles[i].state < Mapped {
-			fmt.Println("Mapping not done")
+	for i := range c.ourFiles {
+		if c.ourFiles[i].state < Mapped {
+			//fmt.Println("Mapping not done")
 			return false
 		}
 	}
 
-	fmt.Println("Mapping done")
+	//fmt.Println("Mapping done")
 	return true
 }
 
@@ -109,13 +106,13 @@ func (c *Coordinator) CompleteTask(args *Arguments, reply *Reply) error {
 	c.mu.Lock()
 	switch args.TaskType {
 	case MAP:
-		ourFiles[args.Id].state = Mapped
-		fmt.Printf("Map Task completed: %d\n", args.Id)
+		c.ourFiles[args.Id].state = Mapped
+		//fmt.Printf("Map Task completed: %d\n", args.Id)
 		// check if all tasks are mapped
-		c.isMappingDone = mapDone()
+		c.isMappingDone = c.mapDone()
 	case REDUCE:
-		ourFiles[args.Id].state = Finished
-		fmt.Printf("Reduce Task completed with ID: %d\n", args.Id)
+		c.ourFiles[args.Id].state = Finished
+		//fmt.Printf("Reduce Task completed with ID: %d\n", args.Id)
 	}
 	c.mu.Unlock()
 	return nil
@@ -140,8 +137,8 @@ func (c *Coordinator) server() {
 func (c *Coordinator) Done() bool {
 	c.mu.Lock()
 	// Your code here.
-	for i := range ourFiles {
-		if ourFiles[i].state != Finished {
+	for i := range c.ourFiles {
+		if c.ourFiles[i].state != Finished {
 			c.mu.Unlock()
 			return false
 		}
@@ -156,10 +153,10 @@ func (c *Coordinator) checkWorkers() {
 	for {
 		c.mu.Lock()
 		for i := range c.workerTimes {
-			if ourFiles[i].state == Mapping && time.Since(c.workerTimes[i]) >= time.Duration(10)*time.Second {
-				ourFiles[i].state = StateIdle
-			} else if ourFiles[i].state == Reducing && time.Since(c.workerTimes[i]) >= time.Duration(10)*time.Second {
-				ourFiles[i].state = Mapped
+			if c.ourFiles[i].state == Mapping && time.Since(c.workerTimes[i]) >= time.Duration(10)*time.Second {
+				c.ourFiles[i].state = StateIdle
+			} else if c.ourFiles[i].state == Reducing && time.Since(c.workerTimes[i]) >= time.Duration(10)*time.Second {
+				c.ourFiles[i].state = Mapped
 			}
 
 		}
@@ -179,14 +176,10 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 
 	// fill an array of File structs
 	for i := range files {
-		ourFiles = append(ourFiles, File{filename: files[i], state: StateIdle})
+		c.ourFiles = append(c.ourFiles, File{filename: files[i], state: StateIdle})
 	}
 
-	for i := range ourFiles {
-		fmt.Println(ourFiles[i].filename)
-	}
-
-	Nreduce = nReduce
+	c.Nreduce = nReduce
 
 	// Append 5 nil pointers to the end
 	c.workerTimes = append(c.workerTimes, make([]time.Time, len(files))...)
