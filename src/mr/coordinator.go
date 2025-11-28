@@ -12,14 +12,16 @@ import (
 
 type Coordinator struct {
 	// Your definitions here.
-	mu            sync.Mutex
-	isMappingDone bool
-	workerTimes   []time.Time
-	Nreduce       int
-	ourFiles      []File
+	mu                sync.Mutex
+	isMappingDone     bool
+	mapWorkerTimes    []time.Time
+	reduceWorkerTimes []time.Time
+	Nreduce           int
+	ourFiles          []Task
+	reduceTasks       []Task
 }
 
-type File struct {
+type Task struct {
 	filename string
 	state    State
 }
@@ -29,9 +31,7 @@ type State int
 // Enums for the worker, idle = 0, working = 1, Mapped = 2. Which iota generates.
 const (
 	StateIdle = iota
-	Mapping
-	Mapped
-	Reducing
+	Working
 	Finished
 )
 
@@ -59,20 +59,20 @@ func (c *Coordinator) AssignTask(args *Arguments, reply *Reply) error {
 				reply.Nreducetasks = c.Nreduce
 				reply.Id = i
 				reply.TaskType = MAP
-				c.ourFiles[i].state = Mapping // set state to "in progress"
-				c.workerTimes[i] = time.Now()
+				c.ourFiles[i].state = Working // set state to "in progress"
+				c.mapWorkerTimes[i] = time.Now()
 				c.mu.Unlock()
 				return nil
 			}
 		}
 	} else {
 		// if all map tasks are done
-		for i := range c.ourFiles {
-			if c.ourFiles[i].state == Mapped {
+		for i := range c.reduceTasks {
+			if c.reduceTasks[i].state == StateIdle {
 				reply.Id = i
 				reply.TaskType = REDUCE
-				c.ourFiles[i].state = Reducing // set state to "in progress"
-				c.workerTimes[i] = time.Now()
+				c.reduceTasks[i].state = Working // set state to "in progress"
+				c.reduceWorkerTimes[i] = time.Now()
 				//fmt.Printf("Starting Reduce task on ID: %d\n", reply.Id)
 				c.mu.Unlock()
 				return nil
@@ -90,7 +90,7 @@ func (c *Coordinator) mapDone() bool {
 
 	// Your code here.
 	for i := range c.ourFiles {
-		if c.ourFiles[i].state < Mapped {
+		if c.ourFiles[i].state < Finished {
 			//fmt.Println("Mapping not done")
 			return false
 		}
@@ -106,12 +106,12 @@ func (c *Coordinator) CompleteTask(args *Arguments, reply *Reply) error {
 	c.mu.Lock()
 	switch args.TaskType {
 	case MAP:
-		c.ourFiles[args.Id].state = Mapped
+		c.ourFiles[args.Id].state = Finished
 		//fmt.Printf("Map Task completed: %d\n", args.Id)
 		// check if all tasks are mapped
 		c.isMappingDone = c.mapDone()
 	case REDUCE:
-		c.ourFiles[args.Id].state = Finished
+		c.reduceTasks[args.Id].state = Finished
 		//fmt.Printf("Reduce Task completed with ID: %d\n", args.Id)
 	}
 	c.mu.Unlock()
@@ -137,8 +137,8 @@ func (c *Coordinator) server() {
 func (c *Coordinator) Done() bool {
 	c.mu.Lock()
 	// Your code here.
-	for i := range c.ourFiles {
-		if c.ourFiles[i].state != Finished {
+	for i := range c.reduceTasks {
+		if c.reduceTasks[i].state != Finished {
 			c.mu.Unlock()
 			return false
 		}
@@ -152,11 +152,11 @@ func (c *Coordinator) checkWorkers() {
 
 	for {
 		c.mu.Lock()
-		for i := range c.workerTimes {
-			if c.ourFiles[i].state == Mapping && time.Since(c.workerTimes[i]) >= time.Duration(10)*time.Second {
+		for i := range c.mapWorkerTimes {
+			if c.ourFiles[i].state == Working && time.Since(c.mapWorkerTimes[i]) >= time.Duration(10)*time.Second {
 				c.ourFiles[i].state = StateIdle
-			} else if c.ourFiles[i].state == Reducing && time.Since(c.workerTimes[i]) >= time.Duration(10)*time.Second {
-				c.ourFiles[i].state = Mapped
+			} else if c.reduceTasks[i].state == Working && time.Since(c.reduceWorkerTimes[i]) >= time.Duration(10)*time.Second {
+				c.reduceTasks[i].state = StateIdle
 			}
 
 		}
@@ -176,13 +176,17 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 
 	// fill an array of File structs
 	for i := range files {
-		c.ourFiles = append(c.ourFiles, File{filename: files[i], state: StateIdle})
+		c.ourFiles = append(c.ourFiles, Task{filename: files[i], state: StateIdle})
 	}
 
 	c.Nreduce = nReduce
 
 	// Append 5 nil pointers to the end
-	c.workerTimes = append(c.workerTimes, make([]time.Time, len(files))...)
+	c.mapWorkerTimes = append(c.mapWorkerTimes, make([]time.Time, len(files))...)
+
+	c.reduceWorkerTimes = append(c.reduceWorkerTimes, make([]time.Time, nReduce)...)
+
+	c.reduceTasks = append(c.reduceTasks, make([]Task, nReduce)...)
 
 	go c.checkWorkers()
 
