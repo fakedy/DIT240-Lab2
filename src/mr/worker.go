@@ -63,6 +63,7 @@ func Worker(mapf func(string, string) []KeyValue, reducef func(string, []string)
 
 		} else {
 			fmt.Printf("Call failed!\n")
+			return
 		}
 	}
 

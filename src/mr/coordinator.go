@@ -151,6 +151,7 @@ func (c *Coordinator) Done() bool {
 func (c *Coordinator) checkWorkers() {
 
 	for {
+		time.Sleep(time.Second * time.Duration(10))
 		c.mu.Lock()
 		for i := range c.mapWorkerTimes {
 			if c.ourFiles[i].state == Working && time.Since(c.mapWorkerTimes[i]) >= time.Duration(10)*time.Second {
@@ -164,7 +165,6 @@ func (c *Coordinator) checkWorkers() {
 			}
 		}
 		c.mu.Unlock()
-		time.Sleep(time.Second * time.Duration(10))
 	}
 }
 
