@@ -220,7 +220,7 @@ func doREDUCE(reducef func(string, []string) string, reply *Reply) {
 	ofile.Close()
 
 	// remove intermediate files
-	for _, f := range files {
-		os.Remove(f.Name())
-	}
+	//for _, f := range files {
+	//	os.Remove(f.Name())
+	//}
 }
