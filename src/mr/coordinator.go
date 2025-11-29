@@ -1,6 +1,7 @@
 package mr
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -62,6 +63,7 @@ func (c *Coordinator) AssignTask(args *Arguments, reply *Reply) error {
 				c.ourFiles[i].state = Working // set state to "in progress"
 				c.mapWorkerTimes[i] = time.Now()
 				c.mu.Unlock()
+				fmt.Print("Running map job\n")
 				return nil
 			}
 		}
@@ -101,14 +103,13 @@ func (c *Coordinator) mapDone() bool {
 }
 
 func (c *Coordinator) CompleteTask(args *Arguments, reply *Reply) error {
-
 	// loop through our files and assign a task that have not been processed yet
 	c.mu.Lock()
 	switch args.TaskType {
 	case MAP:
-		c.ourFiles[args.Id].state = Finished
 		//fmt.Printf("Map Task completed: %d\n", args.Id)
 		// check if all tasks are mapped
+		c.ourFiles[args.Id].state = Finished
 		c.isMappingDone = c.mapDone()
 	case REDUCE:
 		c.reduceTasks[args.Id].state = Finished
@@ -151,16 +152,16 @@ func (c *Coordinator) Done() bool {
 func (c *Coordinator) checkWorkers() {
 
 	for {
-		time.Sleep(time.Second * time.Duration(10))
+		time.Sleep(time.Second * 1)
 		c.mu.Lock()
 		for i := range c.mapWorkerTimes {
-			if c.ourFiles[i].state == Working && time.Since(c.mapWorkerTimes[i]) >= time.Duration(10)*time.Second {
+			if c.ourFiles[i].state == Working && time.Since(c.mapWorkerTimes[i]) >= 10*time.Second {
 				c.ourFiles[i].state = StateIdle
 			}
 
 		}
 		for i := range c.reduceTasks {
-			if c.reduceTasks[i].state == Working && time.Since(c.reduceWorkerTimes[i]) >= time.Duration(10)*time.Second {
+			if c.reduceTasks[i].state == Working && time.Since(c.reduceWorkerTimes[i]) >= 10*time.Second {
 				c.reduceTasks[i].state = StateIdle
 			}
 		}

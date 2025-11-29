@@ -62,7 +62,7 @@ func Worker(mapf func(string, string) []KeyValue, reducef func(string, []string)
 			}
 
 		} else {
-			fmt.Printf("Call failed!\n")
+			//fmt.Printf("Call failed!\n")
 			return
 		}
 	}
@@ -77,7 +77,8 @@ func call(rpcname string, args interface{}, reply interface{}) bool {
 	sockname := coordinatorSock()
 	c, err := rpc.DialHTTP("unix", sockname)
 	if err != nil {
-		log.Fatal("dialing:", err)
+		//log.Fatal("dialing:", err)
+		return false
 	}
 	defer c.Close()
 
