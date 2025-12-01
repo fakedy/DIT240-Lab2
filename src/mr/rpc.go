@@ -33,7 +33,7 @@ type Arguments struct {
 
 type Type int
 
-// Enums for the worker, idle = 0, working = 1. Which iota generates.
+// Enums for the worker, idle = 0, working = 1, WAIT = 2 Which iota generates.
 const (
 	MAP Type = iota
 	REDUCE

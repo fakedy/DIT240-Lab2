@@ -1,7 +1,6 @@
 package mr
 
 import (
-	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -18,7 +17,7 @@ type Coordinator struct {
 	mapWorkerTimes    []time.Time
 	reduceWorkerTimes []time.Time
 	Nreduce           int
-	ourFiles          []Task
+	mapTasks          []Task
 	reduceTasks       []Task
 }
 
@@ -29,7 +28,7 @@ type Task struct {
 
 type State int
 
-// Enums for the worker, idle = 0, working = 1, Mapped = 2. Which iota generates.
+// Enums for the worker, idle = 0, working = 1, Finished = 2. Which iota generates.
 const (
 	StateIdle = iota
 	Working
@@ -52,23 +51,25 @@ func (c *Coordinator) AssignTask(args *Arguments, reply *Reply) error {
 	c.mu.Lock()
 
 	// if mapping is not done
+
 	if !c.isMappingDone {
-		for i := range c.ourFiles {
-			if c.ourFiles[i].state == StateIdle {
-				//fmt.Printf("filename: %s state: %d ID: %d\n", ourFiles[i].filename, ourFiles[i].state, i)
-				reply.Filename = c.ourFiles[i].filename
+		for i := range c.mapTasks {
+			if c.mapTasks[i].state == StateIdle {
+				//fmt.Printf("filename: %s state: %d ID: %d\n", mapTasks[i].filename, mapTasks[i].state, i)
+				reply.Filename = c.mapTasks[i].filename
 				reply.Nreducetasks = c.Nreduce
 				reply.Id = i
 				reply.TaskType = MAP
-				c.ourFiles[i].state = Working // set state to "in progress"
+				c.mapTasks[i].state = Working // set state to "in progress"
 				c.mapWorkerTimes[i] = time.Now()
 				c.mu.Unlock()
-				fmt.Print("Running map job\n")
+				//fmt.Print("Running map job\n")
 				return nil
 			}
 		}
 	} else {
 		// if all map tasks are done
+		// if the reduce task is idle, then make it a working reduce task
 		for i := range c.reduceTasks {
 			if c.reduceTasks[i].state == StateIdle {
 				reply.Id = i
@@ -82,6 +83,7 @@ func (c *Coordinator) AssignTask(args *Arguments, reply *Reply) error {
 		}
 	}
 
+	// If we can't assign either, then assign WAIT
 	reply.TaskType = WAIT
 
 	c.mu.Unlock()
@@ -90,9 +92,10 @@ func (c *Coordinator) AssignTask(args *Arguments, reply *Reply) error {
 
 func (c *Coordinator) mapDone() bool {
 
-	// Your code here.
-	for i := range c.ourFiles {
-		if c.ourFiles[i].state < Finished {
+	// for every map task, if the task is less than Finished (since idle = 0, working = 1, Finished = 2.)
+	// then return false since all map tasks are not done.
+	for i := range c.mapTasks {
+		if c.mapTasks[i].state < Finished {
 			//fmt.Println("Mapping not done")
 			return false
 		}
@@ -107,13 +110,11 @@ func (c *Coordinator) CompleteTask(args *Arguments, reply *Reply) error {
 	c.mu.Lock()
 	switch args.TaskType {
 	case MAP:
-		//fmt.Printf("Map Task completed: %d\n", args.Id)
 		// check if all tasks are mapped
-		c.ourFiles[args.Id].state = Finished
+		c.mapTasks[args.Id].state = Finished
 		c.isMappingDone = c.mapDone()
 	case REDUCE:
 		c.reduceTasks[args.Id].state = Finished
-		//fmt.Printf("Reduce Task completed with ID: %d\n", args.Id)
 	}
 	c.mu.Unlock()
 	return nil
@@ -138,6 +139,7 @@ func (c *Coordinator) server() {
 func (c *Coordinator) Done() bool {
 	c.mu.Lock()
 	// Your code here.
+	// if all reduce tasks are done, return true otherwise false
 	for i := range c.reduceTasks {
 		if c.reduceTasks[i].state != Finished {
 			c.mu.Unlock()
@@ -149,14 +151,15 @@ func (c *Coordinator) Done() bool {
 	return true
 }
 
+// Check if a workers time since start has reached over 10 second (e.g crashed, unresponsive) then change to idle state
 func (c *Coordinator) checkWorkers() {
 
 	for {
-		time.Sleep(time.Second * 1)
+		time.Sleep(time.Second)
 		c.mu.Lock()
 		for i := range c.mapWorkerTimes {
-			if c.ourFiles[i].state == Working && time.Since(c.mapWorkerTimes[i]) >= 10*time.Second {
-				c.ourFiles[i].state = StateIdle
+			if c.mapTasks[i].state == Working && time.Since(c.mapWorkerTimes[i]) >= 10*time.Second {
+				c.mapTasks[i].state = StateIdle
 			}
 
 		}
@@ -180,18 +183,19 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 
 	// fill an array of File structs
 	for i := range files {
-		c.ourFiles = append(c.ourFiles, Task{filename: files[i], state: StateIdle})
+		c.mapTasks = append(c.mapTasks, Task{filename: files[i], state: StateIdle})
 	}
 
 	c.Nreduce = nReduce
 
-	// Append 5 nil pointers to the end
+	// Allocate spaces for worker times for every map tasks and reduce tasks
 	c.mapWorkerTimes = append(c.mapWorkerTimes, make([]time.Time, len(files))...)
 
 	c.reduceWorkerTimes = append(c.reduceWorkerTimes, make([]time.Time, nReduce)...)
 
 	c.reduceTasks = append(c.reduceTasks, make([]Task, nReduce)...)
 
+	// Start a go routine that checks if a worker has crashed etc.
 	go c.checkWorkers()
 
 	c.server()

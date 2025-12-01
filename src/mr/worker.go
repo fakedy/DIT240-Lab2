@@ -41,9 +41,12 @@ func Worker(mapf func(string, string) []KeyValue, reducef func(string, []string)
 	// Your worker implementation here.
 
 	for {
+		// Call coordinator with arguments and reply
 		args := Arguments{}
 		reply := Reply{}
 		ok := call("Coordinator.AssignTask", &args, &reply)
+
+		// Objects for Coordinator.CompleteTask
 		completeReply := Reply{}
 		completeArgs := Arguments{reply.Id, reply.TaskType}
 		if ok {
@@ -61,6 +64,7 @@ func Worker(mapf func(string, string) []KeyValue, reducef func(string, []string)
 				break
 			}
 
+			// Exits quietly
 		} else {
 			//fmt.Printf("Call failed!\n")
 			return
@@ -108,6 +112,7 @@ func doMAP(mapf func(string, string) []KeyValue, reply *Reply) {
 
 	kva := mapf(reply.Filename, string(content))
 
+	// a list of our files and encoder for every file
 	files := make([]*os.File, reply.Nreducetasks)
 	encoders := make([]*json.Encoder, reply.Nreducetasks)
 
@@ -136,6 +141,7 @@ func doMAP(mapf func(string, string) []KeyValue, reply *Reply) {
 		}
 	}
 
+	// Rename file to respective map task ID and reduce task ID.
 	for i, f := range files {
 		f.Close()
 		finalName := fmt.Sprintf("mr-%d-%d", reply.Id, i)
